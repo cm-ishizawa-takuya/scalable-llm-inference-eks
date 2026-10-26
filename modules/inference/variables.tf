@@ -4,16 +4,36 @@ variable "namespace" {
   default     = "inference"
 }
 
-variable "vllm_image" {
-  description = "vLLM OpenAI-compatible server image."
+variable "vllm_image_repository" {
+  description = "Repository of the vLLM OpenAI-compatible server image. The unit points this at the ECR pull-through cache."
   type        = string
-  default     = "vllm/vllm-openai:v0.32.0"
+  default     = "vllm/vllm-openai"
 }
 
-variable "model_id" {
-  description = "Hugging Face model ID vLLM loads."
+variable "vllm_image_tag" {
+  description = "Tag of the vLLM image."
   type        = string
-  default     = "Qwen/Qwen3-4B-Instruct-2507"
+  default     = "v0.32.0"
+}
+
+variable "cluster_name" {
+  description = "EKS cluster name, used for the Pod Identity association and IAM role names."
+  type        = string
+}
+
+variable "model_bucket_name" {
+  description = "S3 bucket that holds the model weights."
+  type        = string
+}
+
+variable "model_bucket_arn" {
+  description = "ARN of the model weights bucket."
+  type        = string
+}
+
+variable "model_s3_prefix" {
+  description = "Key prefix of the model files in the bucket."
+  type        = string
 }
 
 variable "served_model_name" {

@@ -10,8 +10,16 @@ terraform {
   source = "../../modules/inference"
 }
 
-# No outputs are needed from the GPU NodePool, but vLLM Pods cannot start
-# without it, so `run --all` must apply it first.
+# No outputs are needed from these units, but vLLM cannot start before the
+# GPU NodePool exists and the weights are in S3, so `run --all` applies them
+# first.
 dependencies {
-  paths = ["../nodepool"]
+  paths = ["../nodepool", "../model"]
+}
+
+inputs = {
+  # Pull the vLLM image through the ECR cache created by the cluster unit.
+  vllm_image_repository = dependency.cluster.outputs.vllm_image_repository
+  model_bucket_name     = dependency.cluster.outputs.model_bucket_name
+  model_bucket_arn      = dependency.cluster.outputs.model_bucket_arn
 }

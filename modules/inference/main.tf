@@ -15,6 +15,75 @@ resource "kubernetes_manifest" "namespace" {
   }
 }
 
+################################################################################
+# Pod Identity: vLLM may read the model bucket
+################################################################################
+
+resource "aws_iam_role" "vllm" {
+  name = "${var.cluster_name}-vllm"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "pods.eks.amazonaws.com"
+        }
+        Action = [
+          "sts:AssumeRole",
+          "sts:TagSession",
+        ]
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "vllm" {
+  name = "model-bucket-read"
+  role = aws_iam_role.vllm.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
+        Resource = var.model_bucket_arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObject"]
+        Resource = "${var.model_bucket_arn}/${var.model_s3_prefix}/*"
+      },
+    ]
+  })
+}
+
+resource "kubernetes_manifest" "vllm_sa" {
+  manifest = {
+    apiVersion = "v1"
+    kind       = "ServiceAccount"
+    metadata = {
+      name      = "vllm"
+      namespace = var.namespace
+    }
+  }
+
+  depends_on = [kubernetes_manifest.namespace]
+}
+
+resource "aws_eks_pod_identity_association" "vllm" {
+  cluster_name    = var.cluster_name
+  namespace       = var.namespace
+  service_account = "vllm"
+  role_arn        = aws_iam_role.vllm.arn
+}
+
+################################################################################
+# vLLM
+################################################################################
+
 resource "kubernetes_manifest" "vllm" {
   manifest = {
     apiVersion = "apps/v1"
@@ -43,6 +112,7 @@ resource "kubernetes_manifest" "vllm" {
           # Service, which collides with vLLM's own VLLM_PORT setting and
           # crashes the engine on startup.
           enableServiceLinks = false
+          serviceAccountName = "vllm"
           tolerations = [
             {
               key      = "nvidia.com/gpu"
@@ -53,9 +123,12 @@ resource "kubernetes_manifest" "vllm" {
           containers = [
             {
               name  = "vllm"
-              image = var.vllm_image
+              image = "${var.vllm_image_repository}:${var.vllm_image_tag}"
               args = [
-                "--model", var.model_id,
+                # Weights stream from S3 through the gateway endpoint; the
+                # Run:ai Model Streamer reads safetensors directly into GPU memory.
+                "--model", "s3://${var.model_bucket_name}/${var.model_s3_prefix}",
+                "--load-format", "runai_streamer",
                 "--served-model-name", var.served_model_name,
                 "--dtype", var.dtype,
                 "--max-model-len", tostring(var.max_model_len),
@@ -66,6 +139,12 @@ resource "kubernetes_manifest" "vllm" {
                 {
                   name  = "HF_HOME"
                   value = "/cache/huggingface"
+                },
+                {
+                  # Everything comes from S3. Fail loudly if anything still
+                  # tries to reach Hugging Face through the NAT gateway.
+                  name  = "HF_HUB_OFFLINE"
+                  value = "1"
                 },
               ]
               ports = [
@@ -143,7 +222,11 @@ resource "kubernetes_manifest" "vllm" {
     }
   }
 
-  depends_on = [kubernetes_manifest.namespace]
+  depends_on = [
+    kubernetes_manifest.namespace,
+    kubernetes_manifest.vllm_sa,
+    aws_eks_pod_identity_association.vllm,
+  ]
 }
 
 resource "kubernetes_manifest" "vllm_service" {
