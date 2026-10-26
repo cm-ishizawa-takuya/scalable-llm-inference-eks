@@ -140,6 +140,10 @@ resource "kubernetes_manifest" "vllm" {
                 "--dtype", var.dtype,
                 "--max-model-len", tostring(var.max_model_len),
                 "--gpu-memory-utilization", tostring(var.gpu_memory_utilization),
+                # Chat UIs send tool_choice=auto; vLLM rejects it unless tool
+                # calling is enabled. hermes is the parser for Qwen3.
+                "--enable-auto-tool-choice",
+                "--tool-call-parser", var.tool_call_parser,
                 "--port", "8000",
               ]
               env = [

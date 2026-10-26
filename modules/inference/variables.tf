@@ -122,3 +122,9 @@ variable "scale_up_stabilization_seconds" {
   type        = number
   default     = 60
 }
+
+variable "tool_call_parser" {
+  description = "vLLM tool-call parser for the served model. Qwen3 uses hermes."
+  type        = string
+  default     = "hermes"
+}
