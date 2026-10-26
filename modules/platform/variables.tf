@@ -9,3 +9,15 @@ variable "agent_router_version" {
   type        = string
   default     = "v1.2.0"
 }
+
+variable "prometheus_chart_version" {
+  description = "prometheus-community/prometheus Helm chart version."
+  type        = string
+  default     = "29.38.2"
+}
+
+variable "keda_chart_version" {
+  description = "KEDA Helm chart version."
+  type        = string
+  default     = "2.21.0"
+}
