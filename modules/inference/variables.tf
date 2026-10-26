@@ -71,3 +71,25 @@ variable "model_cache_size" {
   type        = string
   default     = "40Gi"
 }
+
+variable "gateway_name" {
+  description = "Gateway the HTTPRoute attaches to."
+  type        = string
+}
+
+variable "gateway_namespace" {
+  description = "Namespace of that Gateway."
+  type        = string
+}
+
+variable "router_chart_version" {
+  description = "llm-d router (Endpoint Picker + InferencePool) Helm chart version."
+  type        = string
+  default     = "v1.0.0"
+}
+
+variable "request_timeout" {
+  description = "HTTPRoute request timeout. Must exceed a full cold start so a request that arrives at zero replicas survives until vLLM is ready."
+  type        = string
+  default     = "900s"
+}
