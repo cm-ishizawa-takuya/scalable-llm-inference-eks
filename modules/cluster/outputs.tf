@@ -42,3 +42,13 @@ output "vllm_image_repository" {
   description = "ECR repository that caches the vLLM image from Docker Hub."
   value       = "${local.ecr_registry}/${aws_ecr_repository.vllm.name}"
 }
+
+output "model_bucket_name" {
+  description = "S3 bucket that holds model weights."
+  value       = aws_s3_bucket.models.bucket
+}
+
+output "model_bucket_arn" {
+  description = "ARN of the model weights bucket."
+  value       = aws_s3_bucket.models.arn
+}
