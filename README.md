@@ -13,7 +13,9 @@ AWS 側と Kubernetes 側をどちらも Terraform で書き、Terragrunt のユ
 | `inference` | vLLM、InferencePool、Endpoint Picker、HTTPRoute、ScaledObject |
 | `webui` | Open WebUI |
 
-ユニットは上から順に追加していきます。現時点ではツールチェーンの定義だけがあり、ユニットはまだありません。
+ユニットは上から順に追加していきます。現時点では `cluster` までがあります。
+
+共通設定は `root.hcl` にあります。リージョンは環境変数 `AWS_REGION` から読み、Terraform の state は `scalable-llm-inference-tfstate-<アカウント ID>-<リージョン>` という名前の S3 バケットに置きます。
 
 ## 前提
 
@@ -23,12 +25,39 @@ AWS 側と Kubernetes 側をどちらも Terraform で書き、Terragrunt のユ
 
 ## 実行手順
 
+認証情報とリージョンを環境変数で渡します。リージョンはどこでも構いません。
+
 ```
 mise install
+export AWS_REGION=us-east-1   # 使うリージョンに置き換える
 ```
 
-ユニットを追加するたびに、適用コマンドを書き足します。
+`cluster` ユニットを適用します。初回だけ `backend bootstrap` で state 用の S3 バケットを作ってください。EKS クラスターの作成には 10 分ほどかかります。
+
+```
+cd units/cluster
+terragrunt backend bootstrap
+terragrunt apply
+```
+
+kubeconfig を取得して、Auto Mode の built-in NodePool が見えれば完了です。Pod がない間、ノードは 1 台も起動しません。
+
+```
+aws eks update-kubeconfig --name scalable-llm-inference
+kubectl get nodepools
+```
 
 ## 後片付け
 
-GPU ノードが 0 台でも、EKS クラスター、CPU ノード、NLB には料金がかかります。検証しない時間帯はクラスターごと削除してください。削除コマンドもユニットを追加するたびに書き足します。
+GPU ノードが 0 台でも、EKS クラスター、NAT Gateway、CPU ノード、NLB には料金がかかります。検証しない時間帯はクラスターごと削除してください。
+
+```
+cd units/cluster
+terragrunt destroy
+```
+
+state 用の S3 バケットは Terragrunt が管理外で作るので、最後に手で削除します。
+
+```
+aws s3 rb s3://scalable-llm-inference-tfstate-<アカウント ID>-<リージョン> --force
+```
