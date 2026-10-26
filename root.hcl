@@ -43,4 +43,9 @@ generate "provider" {
 inputs = {
   region       = local.region
   cluster_name = local.cluster_name
+
+  # The model is referenced by two units: `model` uploads it to S3 and
+  # `inference` serves it from there, so both read the same values.
+  model_id        = "Qwen/Qwen3-4B-Instruct-2507"
+  model_s3_prefix = "qwen3-4b-instruct-2507"
 }

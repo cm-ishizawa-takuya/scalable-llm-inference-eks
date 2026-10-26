@@ -10,11 +10,12 @@ AWS 側と Kubernetes 側をどちらも Terraform で書き、Terragrunt のユ
 | --- | --- |
 | `cluster` | VPC、IAM ロール、EKS Auto Mode クラスター |
 | `nodepool` | GPU 用 NodePool |
+| `model` | モデルの重みを Hugging Face から S3 へコピーする Job と、その Pod Identity |
 | `platform` | Envoy Gateway、Agent Router、Gateway API Inference Extension の CRD、KEDA、Prometheus |
 | `inference` | vLLM、InferencePool、Endpoint Picker、HTTPRoute、ScaledObject |
 | `webui` | Open WebUI |
 
-ユニットは上から順に追加していきます。現時点では `nodepool` までがあります。
+ユニットは上から順に追加していきます。現時点では `cluster`、`nodepool`、`model`、`inference` があります。
 
 共通設定は `root.hcl` にあります。リージョンは環境変数 `AWS_REGION` から読み、Terraform の state は `scalable-llm-inference-tfstate-<アカウント ID>-<リージョン>` という名前の S3 バケットに置きます。
 
