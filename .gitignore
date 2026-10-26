@@ -1,0 +1,23 @@
+# Terraform / Terragrunt
+.terraform/
+.terragrunt-cache/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.auto.tfvars.example
+crash.log
+terraform.tfplan
+
+# mise per-machine overrides
+mise.local.toml
+
+# Kubernetes credentials and generated secrets
+kubeconfig*
+*.pem
+*.key
+.env
+
+# Editor and OS noise
+.DS_Store
+.vscode/
+.idea/
