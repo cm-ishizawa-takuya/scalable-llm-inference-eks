@@ -93,3 +93,32 @@ variable "request_timeout" {
   type        = string
   default     = "900s"
 }
+
+variable "prometheus_url" {
+  description = "Prometheus server URL that KEDA queries."
+  type        = string
+}
+
+variable "min_replicas" {
+  description = "Minimum vLLM replicas KEDA keeps. 0 enables scale-to-zero."
+  type        = number
+  default     = 1
+}
+
+variable "max_replicas" {
+  description = "Maximum vLLM replicas. Keep within the GPU NodePool limit."
+  type        = number
+  default     = 2
+}
+
+variable "running_requests_per_replica" {
+  description = "Average number of in-flight requests per replica that triggers a scale-out. On a T4, 8 concurrent 256-token requests take about 11 s each versus 3 s alone."
+  type        = number
+  default     = 4
+}
+
+variable "scale_up_stabilization_seconds" {
+  description = "How long demand must stay high before the HPA adds replicas. Overshoot is bounded by max_replicas, so a short window keeps the demo responsive; raise it toward one cold start (about 300) when max_replicas is large."
+  type        = number
+  default     = 60
+}

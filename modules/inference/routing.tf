@@ -25,6 +25,14 @@ resource "helm_release" "router" {
     { name = "router.epp.resources.requests.cpu", value = "500m" },
     { name = "router.epp.resources.requests.memory", value = "1Gi" },
     { name = "router.epp.resources.limits.memory", value = "2Gi" },
+    # Serve /metrics without a bearer token so that annotation-based scraping
+    # works. Acceptable inside this private demo cluster.
+    { name = "router.monitoring.prometheus.auth.enabled", value = "false" },
+    # Annotation values must stay strings; without `type` Helm would parse
+    # "true" and "9090" as a bool and a number.
+    { name = "router.epp.podAnnotations.prometheus\\.io/scrape", value = "true", type = "string" },
+    { name = "router.epp.podAnnotations.prometheus\\.io/port", value = "9090", type = "string" },
+    { name = "router.epp.podAnnotations.prometheus\\.io/path", value = "/metrics", type = "string" },
   ]
 
   depends_on = [kubernetes_manifest.namespace]

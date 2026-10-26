@@ -106,6 +106,12 @@ resource "kubernetes_manifest" "vllm" {
       template = {
         metadata = {
           labels = local.labels
+          # Picked up by Prometheus' kubernetes-pods scrape job.
+          annotations = {
+            "prometheus.io/scrape" = "true"
+            "prometheus.io/port"   = "8000"
+            "prometheus.io/path"   = "/metrics"
+          }
         }
         spec = {
           # Service links would inject VLLM_PORT=tcp://... for the "vllm"
@@ -221,6 +227,9 @@ resource "kubernetes_manifest" "vllm" {
       }
     }
   }
+
+  # KEDA's HPA changes the replica count at runtime; do not fight it.
+  computed_fields = ["metadata.annotations", "metadata.labels", "spec.replicas"]
 
   depends_on = [
     kubernetes_manifest.namespace,

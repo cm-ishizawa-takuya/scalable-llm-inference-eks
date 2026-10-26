@@ -22,6 +22,11 @@ dependency "gateway" {
   config_path = "../gateway"
 }
 
+# KEDA reads vLLM metrics from the Prometheus installed by the platform unit.
+dependency "platform" {
+  config_path = "../platform"
+}
+
 generate "helm_provider" {
   path      = "helm_provider.tf"
   if_exists = "overwrite_terragrunt"
@@ -51,4 +56,5 @@ inputs = {
   model_bucket_arn      = dependency.cluster.outputs.model_bucket_arn
   gateway_name          = dependency.gateway.outputs.gateway_name
   gateway_namespace     = dependency.gateway.outputs.gateway_namespace
+  prometheus_url        = dependency.platform.outputs.prometheus_url
 }
