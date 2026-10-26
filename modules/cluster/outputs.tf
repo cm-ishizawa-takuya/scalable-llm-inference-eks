@@ -37,3 +37,8 @@ output "public_subnet_ids" {
   description = "Public subnet IDs for internet-facing load balancers."
   value       = values(aws_subnet.public)[*].id
 }
+
+output "vllm_image_repository" {
+  description = "ECR repository that caches the vLLM image from Docker Hub."
+  value       = "${local.ecr_registry}/${aws_ecr_repository.vllm.name}"
+}
