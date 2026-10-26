@@ -47,9 +47,6 @@ generate "helm_provider" {
 }
 
 inputs = {
-  # Start with one replica; autoscaling takes over in a later unit.
-  replicas = 1
-
   # Pull the vLLM image through the ECR cache created by the cluster unit.
   vllm_image_repository = dependency.cluster.outputs.vllm_image_repository
   model_bucket_name     = dependency.cluster.outputs.model_bucket_name

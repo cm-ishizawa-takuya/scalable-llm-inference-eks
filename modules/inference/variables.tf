@@ -60,12 +60,6 @@ variable "gpu_memory_utilization" {
   default     = 0.90
 }
 
-variable "replicas" {
-  description = "Initial number of vLLM replicas. Autoscaling takes over in a later unit."
-  type        = number
-  default     = 1
-}
-
 variable "model_cache_size" {
   description = "Size limit of the emptyDir that caches downloaded weights on the node's local storage."
   type        = string
@@ -100,9 +94,15 @@ variable "prometheus_url" {
 }
 
 variable "min_replicas" {
-  description = "Minimum vLLM replicas KEDA keeps. 0 enables scale-to-zero."
+  description = "Minimum vLLM replicas KEDA keeps. 0 enables scale-to-zero; the EPP queue holds requests during the cold start."
   type        = number
-  default     = 1
+  default     = 0
+}
+
+variable "flow_control_max_concurrency" {
+  description = "In-flight requests per vLLM replica at which the EPP considers the pool saturated and starts queueing."
+  type        = number
+  default     = 16
 }
 
 variable "max_replicas" {

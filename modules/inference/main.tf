@@ -94,7 +94,8 @@ resource "kubernetes_manifest" "vllm" {
       labels    = local.labels
     }
     spec = {
-      replicas = var.replicas
+      # No replicas here: KEDA owns the count (0 when idle). Kubernetes
+      # defaults a new Deployment to 1 until KEDA takes over.
       selector = {
         matchLabels = local.labels
       }
@@ -230,6 +231,9 @@ resource "kubernetes_manifest" "vllm" {
 
   # KEDA's HPA changes the replica count at runtime; do not fight it.
   computed_fields = ["metadata.annotations", "metadata.labels", "spec.replicas"]
+  field_manager {
+    force_conflicts = true
+  }
 
   depends_on = [
     kubernetes_manifest.namespace,

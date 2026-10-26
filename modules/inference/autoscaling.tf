@@ -8,8 +8,12 @@
 # signal users feel. The EPP is also always running, so the series exists even
 # when vLLM is at zero replicas.
 #
-# Scale-to-zero comes later: this step validates 1 -> N first, as the llm-d
-# guide recommends.
+# Two triggers:
+#   - in-flight requests per replica drive 1 -> N;
+#   - the Flow Control queue depth drives 0 -> 1: at zero replicas every
+#     request waits in the EPP queue, the queue metric goes above zero and
+#     KEDA activates the Deployment.
+# After cooldownPeriod with both triggers at zero, KEDA scales back to zero.
 ################################################################################
 
 resource "kubernetes_manifest" "vllm_scaledobject" {
@@ -54,6 +58,16 @@ resource "kubernetes_manifest" "vllm_scaledobject" {
             query         = "sum(llm_d_epp_request_running{namespace=\"${var.namespace}\"})"
             # In-flight requests per replica before another replica is added.
             threshold = tostring(var.running_requests_per_replica)
+          }
+        },
+        {
+          type       = "prometheus"
+          metricType = "AverageValue"
+          metadata = {
+            serverAddress = var.prometheus_url
+            query         = "sum(llm_d_epp_flow_control_queue_size{namespace=\"${var.namespace}\"})"
+            # Any queued request means capacity is missing.
+            threshold = "1"
           }
         },
       ]
