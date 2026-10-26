@@ -1,0 +1,33 @@
+# Load generator. Apply with kubectl when you want to watch the autoscaler:
+#   kubectl create configmap load-script -n inference --from-file=load.js
+#   kubectl apply -f job.yaml
+# Delete the Job to stop early. Adjust VUS and DURATION below.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: load-test
+  namespace: inference
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: k6
+          image: grafana/k6:2.3.0
+          args: ["run", "/scripts/load.js"]
+          env:
+            - name: VUS
+              value: "8"
+            - name: DURATION
+              value: "5m"
+            - name: MAX_TOKENS
+              value: "256"
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+              readOnly: true
+      volumes:
+        - name: script
+          configMap:
+            name: load-script
