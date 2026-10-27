@@ -1,7 +1,9 @@
-# Load generator. Apply with kubectl when you want to watch the autoscaler:
-#   kubectl create configmap load-script -n inference --from-file=load.js
-#   kubectl apply -f job.yaml
-# Delete the Job to stop early. Adjust VUS and DURATION below.
+# Load generator. Apply with kubectl from the repository root when you want
+# to watch the autoscaler:
+#   kubectl -n inference create configmap load-script --from-file=manifests/load-test/load.js
+#   kubectl -n inference apply -f manifests/load-test/job.yaml
+# Delete the Job to stop early. Adjust VUS and DURATION below; a second
+# replica needs about 7 minutes before it serves traffic.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -20,7 +22,7 @@ spec:
             - name: VUS
               value: "8"
             - name: DURATION
-              value: "5m"
+              value: "15m"
             - name: MAX_TOKENS
               value: "256"
           volumeMounts:

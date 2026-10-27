@@ -29,7 +29,7 @@ AWS 側と Kubernetes 側をどちらも Terraform で書き、Terragrunt のユ
 
 ## 実行手順
 
-認証情報、リージョン、Docker Hub の認証情報を環境変数で渡します。リージョンはどこでも構いません。Docker Hub の 2 つは Terraform の ephemeral 変数として扱われ、state には残りません。
+コマンドはすべてこのリポジトリのルートで実行します。AWS の認証情報はプロファイルなど AWS CLI の通常の方法で設定しておき、リージョンと Docker Hub の認証情報は環境変数で渡します。リージョンはどこでも構いません。Docker Hub の 2 つは Terraform の ephemeral 変数として扱われ、state には残りません。
 
 ```
 mise install
@@ -53,7 +53,7 @@ kubectl -n webui port-forward svc/open-webui 8080:80
 
 ### 負荷をかけて 1 から 2 へ増やす
 
-`manifests/load-test/` の k6 スクリプトで 8 並列のリクエストを流すと、EPP の実行中リクエスト数が 1 レプリカあたり 4 を超え、KEDA が 2 台目を起動します。
+`manifests/load-test/` の k6 スクリプトで 8 並列のリクエストを 15 分間流すと、EPP の実行中リクエスト数が 1 レプリカあたり 4 を超え、KEDA が 2 台目を起動します。2 台目が応答を返し始めるのは起動から 7 分前後です。
 
 ```
 kubectl -n inference create configmap load-script --from-file=manifests/load-test/load.js
@@ -61,7 +61,11 @@ kubectl -n inference apply -f manifests/load-test/job.yaml
 kubectl -n inference get hpa -w
 ```
 
-負荷を止めるには Job を削除します。レプリカは 5 分後に 1 へ戻り、さらに 5 分で 0 へ戻ります。
+途中で負荷を止めるには Job を削除します。負荷が止まると、レプリカは 5 分後に 1 へ戻り、さらに 5 分で 0 へ戻ります。
+
+```
+kubectl -n inference delete job load-test
+```
 
 ## 後片付け
 
