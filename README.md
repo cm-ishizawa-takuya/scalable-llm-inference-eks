@@ -23,40 +23,52 @@ AWS 側と Kubernetes 側をどちらも Terraform で書き、Terragrunt のユ
 ## 前提
 
 - [mise](https://mise.jdx.dev/)をインストール済みであること
-- EKS、EC2、S3、ECR、IAM のリソースを作成できる AWS 認証情報があること
-- 使うリージョンで EC2 のクォータ `All G and VT Spot Instance Requests` が 4 vCPU 以上あること（g4dn.xlarge の Spot を 1 台起動するため）
+- EKS、EC2、S3、ECR、Secrets Manager、IAM のリソースを作成できる AWS 認証情報があること
+- 使うリージョンで EC2 の G 系クォータが 4 vCPU 以上あること。対象は Spot の `All G and VT Spot Instance Requests` とオンデマンドの `Running On-Demand G and VT instances` の 2 つで、新しいリージョンでは 0 のことがある
+- Docker Hub のアカウントと読み取り専用のアクセストークン（vLLM のイメージを ECR のプルスルーキャッシュ経由で取得するため）
 
 ## 実行手順
 
-認証情報とリージョンを環境変数で渡します。リージョンはどこでも構いません。
+認証情報、リージョン、Docker Hub の認証情報を環境変数で渡します。リージョンはどこでも構いません。Docker Hub の 2 つは Terraform の ephemeral 変数として扱われ、state には残りません。
 
 ```
 mise install
 export AWS_REGION=us-east-1   # 使うリージョンに置き換える
+export TF_VAR_dockerhub_username=<Docker Hub のユーザー名>
+export TF_VAR_dockerhub_token=<Docker Hub のアクセストークン>
 ```
 
-`cluster` ユニットを適用します。初回だけ `backend bootstrap` で state 用の S3 バケットを作ってください。EKS クラスターの作成には 10 分ほどかかります。
+全ユニットを依存順に適用します。初回は `--backend-bootstrap` が state 用の S3 バケットを作ります。EKS の作成を含めて 20 分ほどかかり、完了時点で vLLM は 0 レプリカ、GPU ノードは 0 台です。
 
 ```
-cd units/cluster
-terragrunt backend bootstrap
-terragrunt apply
+terragrunt run --all --backend-bootstrap apply
 ```
 
-kubeconfig を取得して、Auto Mode の built-in NodePool が見えれば完了です。Pod がない間、ノードは 1 台も起動しません。
+kubeconfig を取得し、Open WebUI を手元に引いて `http://localhost:8080` を開いてください。最初のメッセージを送ると GPU ノードと vLLM が起動し、7 分前後で応答が返ります。待っている間の起動の様子は `kubectl get nodeclaims` と `kubectl -n inference get pods` で追えます。
 
 ```
 aws eks update-kubeconfig --name scalable-llm-inference
-kubectl get nodepools
+kubectl -n webui port-forward svc/open-webui 8080:80
 ```
+
+### 負荷をかけて 1 から 2 へ増やす
+
+`manifests/load-test/` の k6 スクリプトで 8 並列のリクエストを流すと、EPP の実行中リクエスト数が 1 レプリカあたり 4 を超え、KEDA が 2 台目を起動します。
+
+```
+kubectl -n inference create configmap load-script --from-file=manifests/load-test/load.js
+kubectl -n inference apply -f manifests/load-test/job.yaml
+kubectl -n inference get hpa -w
+```
+
+負荷を止めるには Job を削除します。レプリカは 5 分後に 1 へ戻り、さらに 5 分で 0 へ戻ります。
 
 ## 後片付け
 
-GPU ノードが 0 台でも、EKS クラスター、NAT Gateway、CPU ノード、NLB には料金がかかります。検証しない時間帯はクラスターごと削除してください。
+GPU ノードが 0 台でも、EKS クラスター、NAT Gateway、VPC エンドポイント、CPU ノードには料金がかかります。検証しない時間帯はクラスターごと削除してください。全ユニットを依存の逆順に削除し、10 分ほどで終わります。
 
 ```
-cd units/cluster
-terragrunt destroy
+terragrunt run --all destroy
 ```
 
 state 用の S3 バケットは Terragrunt が管理外で作るので、最後に手で削除します。
