@@ -16,7 +16,7 @@ AWS 側と Kubernetes 側をどちらも Terraform で書き、Terragrunt のユ
 | `inference` | vLLM、InferencePool、Endpoint Picker（Flow Control 有効）、HTTPRoute、KEDA の ScaledObject |
 | `webui` | Open WebUI |
 
-ユニットは依存順に並んでいます。`terragrunt run --all apply` はこの順で適用します。
+表の並びが依存順で、`terragrunt run --all apply` もこの順に適用します。
 
 共通設定は `root.hcl` にあります。リージョンは環境変数 `AWS_REGION` から読み、Terraform の state は `scalable-llm-inference-tfstate-<アカウント ID>-<リージョン>` という名前の S3 バケットに置きます。
 
@@ -53,7 +53,7 @@ kubectl -n webui port-forward svc/open-webui 8080:80
 
 ### 負荷をかけて 1 から 2 へ増やす
 
-`manifests/load-test/` の k6 スクリプトで 8 並列のリクエストを 15 分間流すと、EPP の実行中リクエスト数が 1 レプリカあたり 4 を超え、KEDA が 2 台目を起動します。2 台目が応答を返し始めるのは起動から 7 分前後です。
+`manifests/load-test/` の k6 スクリプトで 8 並列のリクエストを 15 分間流すと、EPP の実行中リクエスト数が 1 レプリカあたり 4 を超え、KEDA が 2 台目を起動します。2 台目が応答を返し始めるのは、KEDA が増やしてから 7 分前後です。
 
 ```
 kubectl -n inference create configmap load-script --from-file=manifests/load-test/load.js
