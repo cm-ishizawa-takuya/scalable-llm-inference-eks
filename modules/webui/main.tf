@@ -36,6 +36,8 @@ resource "helm_release" "open_webui" {
         { name = "AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST", value = "60" },
         # Environment variables win over values saved in the database.
         { name = "ENABLE_PERSISTENT_CONFIG", value = "False" },
+        # No "new version available" banner in demo screenshots.
+        { name = "ENABLE_VERSION_UPDATE_CHECK", value = "False" },
       ]
     }),
   ]
